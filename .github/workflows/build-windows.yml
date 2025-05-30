@@ -6,13 +6,13 @@ on:
       - main
 
 permissions:
-  contents: write # 赋予写入内容的权限
+  contents: write
 
 jobs:
   build-windows:
     runs-on: windows-latest
     outputs:
-      package_version: ${{ steps.read_version.outputs.version }} # 将读取到的版本号作为 Job 输出
+      package_version: ${{ steps.read_version.outputs.version }}
 
     steps:
     - name: Checkout code
@@ -24,14 +24,14 @@ jobs:
         node-version: 22.x
         cache: 'npm'
 
-    - name: Read package version # 读取 package.json 中的版本号，并设置为步骤输出
+    - name: Read package version
       id: read_version
       run: |
         PACKAGE_VERSION_VAL=$(node -p "require('./package.json').version")
-        echo "PACKAGE_VERSION=$PACKAGE_VERSION_VAL" >> $GITHUB_ENV # 设置为 env 变量，方便本 Job 内使用
-        echo "version=$PACKAGE_VERSION_VAL" >> $GITHUB_OUTPUT # 设置为 step output，以便传递给其他 Job
-        echo "Detected package version: $PACKAGE_VERSION_VAL" # 👈 打印版本号，方便调试
-      shell: bash # 确保使用 bash shell 执行
+        echo "PACKAGE_VERSION=$PACKAGE_VERSION_VAL" >> $GITHUB_ENV
+        echo "version=$PACKAGE_VERSION_VAL" >> $GITHUB_OUTPUT
+        echo "Detected package version: $PACKAGE_VERSION_VAL"
+      shell: bash
 
     - name: Install dependencies
       run: npm install
@@ -39,14 +39,28 @@ jobs:
     - name: Make Electron app (Windows)
       run: npm run make
 
+    - name: List build output
+      run: |
+        echo "Build output structure:"
+        ls -la out/
+        ls -la out/make/
+        if [ -d "out/make/squirrel.windows" ]; then
+          ls -la out/make/squirrel.windows/
+          if [ -d "out/make/squirrel.windows/x64" ]; then
+            ls -la out/make/squirrel.windows/x64/
+          fi
+        fi
+        find out/make/ -name "*.exe" -type f
+      shell: bash
+
     - name: Upload Windows installer artifact
       uses: actions/upload-artifact@v4
       with:
         name: test-app-windows
-        path: out/make/* # 这个路径是 Electron Forge 产生的，应该没问题
+        path: out/make/squirrel.windows/x64/*.exe
 
   release:
-    needs: build-windows # 依赖 build-windows Job
+    needs: build-windows
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
@@ -54,34 +68,36 @@ jobs:
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
-        path: artifacts # 下载到 'artifacts' 目录
+        name: test-app-windows
+        path: artifacts/test-app-windows
 
-    - name: Display downloaded artifact structure # 👈 新增：列出下载文件的结构，这是关键调试信息
+    - name: Display downloaded artifact structure
       run: |
         echo "Listing contents of artifacts/test-app-windows/ recursively:"
-        find artifacts/test-app-windows/ -type f -name "*.exe" # 👈 更精确地查找所有 .exe 文件
-        find artifacts/test-app-windows/ -maxdepth 3 # 👈 打印前3层目录结构
-      shell: bash
+        find artifacts/test-app-windows/ -type f
+        echo "Looking for .exe files:"
+        find artifacts/test-app-windows/ -name "*.exe" -type f
+
+    - name: Find and set executable path
+      id: find_exe
+      run: |
+        EXE_PATH=$(find artifacts/test-app-windows/ -name "*.exe" -type f | head -1)
+        if [ -z "$EXE_PATH" ]; then
+          echo "No .exe file found!"
+          exit 1
+        fi
+        echo "Found executable: $EXE_PATH"
+        echo "exe_path=$EXE_PATH" >> $GITHUB_OUTPUT
 
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ needs.build-windows.outputs.package_version }}
-        release_name: Release v${{ needs.build-windows.outputs.package_version }}
+        name: Release v${{ needs.build-windows.outputs.package_version }}
         draft: false
         prerelease: false
-
-    - name: Upload Release Asset (Windows Installer)
-      uses: actions/upload-release-asset@v1
+        files: ${{ steps.find_exe.outputs.exe_path }}
+        token: ${{ secrets.GITHUB_TOKEN }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        # 再次修改 asset_path，这次使用更宽泛的通配符，在 test-app-windows 目录下递归查找所有 .exe 文件
-        # 如果依然失败，那么问题肯定不在路径上，而是在文件是否真的被下载或存在
-        asset_path: ${{ github.workspace }}/artifacts/test-app-windows/**/*.exe # 👈 使用双星号通配符，递归查找所有 .exe 文件
-        asset_name: test-Windows-Installer-v${{ needs.build-windows.outputs.package_version }}.exe
-        asset_content_type: application/octet-stream
