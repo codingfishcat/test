@@ -50,10 +50,11 @@ jobs:
             ls -la out/make/squirrel.windows/x64/
           fi
         fi
-        # List all .exe, RELEASES, and .nupkg files
-        find out/make/ -name "*.exe" -type f
-        find out/make/ -name "RELEASES" -type f
-        find out/make/ -name "*.nupkg" -type f
+        # List all .exe, RELEASES, .nupkg, and .yml files
+        find out/ -name "*.exe" -type f
+        find out/ -name "RELEASES" -type f
+        find out/ -name "*.nupkg" -type f
+        find out/ -name "*.yml" -type f # Look for .yml files including latest.yml
       shell: bash
 
     - name: Upload Windows installer and release files artifact
@@ -61,7 +62,10 @@ jobs:
       with:
         name: test-app-windows
         # Upload the entire directory content, which should include .exe, RELEASES, and .nupkg
-        path: out/make/squirrel.windows/x64/
+        # And now, specifically include the latest.yml from the 'out' directory
+        path: |
+          out/make/squirrel.windows/x64/
+          out/*.yml # This line is crucial for including latest.yml
 
   release:
     needs: build-windows
@@ -79,17 +83,19 @@ jobs:
       run: |
         echo "Listing contents of artifacts/test-app-windows/ recursively:"
         find artifacts/test-app-windows/ -type f
-        echo "Looking for .exe, RELEASES, and .nupkg files:"
+        echo "Looking for .exe, RELEASES, .nupkg, and .yml files:"
         find artifacts/test-app-windows/ -name "*.exe" -type f
         find artifacts/test-app-windows/ -name "RELEASES" -type f
         find artifacts/test-app-windows/ -name "*.nupkg" -type f
+        find artifacts/test-app-windows/ -name "*.yml" -type f # Check for .yml files here too
 
     - name: Find and set executable and other artifact paths
-      id: find_paths # Changed ID from find_exe to find_paths for clarity
+      id: find_paths
       run: |
         EXE_PATH=$(find artifacts/test-app-windows/ -name "*.exe" -type f | head -1)
         RELEASES_PATH=$(find artifacts/test-app-windows/ -name "RELEASES" -type f | head -1)
         NUPKG_PATH=$(find artifacts/test-app-windows/ -name "*.nupkg" -type f | head -1)
+        LATEST_YML_PATH=$(find artifacts/test-app-windows/ -name "latest.yml" -type f | head -1) # Now find latest.yml
 
         if [ -z "$EXE_PATH" ]; then
           echo "No .exe file found!"
@@ -103,15 +109,21 @@ jobs:
           echo "No .nupkg file found!"
           exit 1
         fi
+        if [ -z "$LATEST_YML_PATH" ]; then # Add check for latest.yml
+          echo "No latest.yml file found!"
+          exit 1
+        fi
 
         echo "Found executable: $EXE_PATH"
         echo "Found RELEASES file: $RELEASES_PATH"
         echo "Found .nupkg file: $NUPKG_PATH"
+        echo "Found latest.yml file: $LATEST_YML_PATH" # Log latest.yml
 
         # Output all found paths
         echo "exe_path=$EXE_PATH" >> $GITHUB_OUTPUT
         echo "releases_path=$RELEASES_PATH" >> $GITHUB_OUTPUT
         echo "nupkg_path=$NUPKG_PATH" >> $GITHUB_OUTPUT
+        echo "latest_yml_path=$LATEST_YML_PATH" >> $GITHUB_OUTPUT # Output latest.yml path
       shell: bash
 
     - name: Create Release
@@ -122,11 +134,12 @@ jobs:
         name: Release v${{ needs.build-windows.outputs.package_version }}
         draft: false
         prerelease: false
-        # Attach all three files to the release
+        # Attach all required files to the release
         files: |
           ${{ steps.find_paths.outputs.exe_path }}
           ${{ steps.find_paths.outputs.releases_path }}
           ${{ steps.find_paths.outputs.nupkg_path }}
+          ${{ steps.find_paths.outputs.latest_yml_path }} # Add latest.yml here
         token: ${{ secrets.GITHUB_TOKEN }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
