@@ -3,39 +3,39 @@ name: Build Electron App for Windows
 on:
   push:
     branches:
-      - main # 当代码推送到 main 分支时触发
-  # pull_request: # 如果你只希望在 push 到 main 时创建 Release，可以注释掉这一行和下面的 branches
+      - main
+  # pull_request:
   #   branches:
   #     - main
 
-permissions: # 👈 新增这一行
-  contents: write # 👈 新增这一行，赋予写入内容的权限
+permissions:
+  contents: write # 赋予写入内容的权限
 
-jobs: # 👈 jobs: 这一行不要动，permissions: 必须在它上方
+jobs:
   build-windows:
-    runs-on: windows-latest # 只在最新的 Windows 虚拟机上运行
+    runs-on: windows-latest
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4 # 获取你的项目代码
+      uses: actions/checkout@v4
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 22.x # 使用 Node.js 22.x
-        cache: 'npm' # 缓存 npm 依赖，加快安装速度
+        node-version: 22.x
+        cache: 'npm'
 
     - name: Install dependencies
-      run: npm install # 安装项目所需的所有依赖
+      run: npm install
 
     - name: Make Electron app (Windows)
-      run: npm run make # 执行 package.json 中定义的 "make" 脚本
+      run: npm run make
 
     - name: Upload Windows installer artifact
       uses: actions/upload-artifact@v4
       with:
-        name: test-app-windows # 上传产物的名称
-        path: out/make/* # Electron Forge 默认会将 make 后的产物放在 out/make 目录下
+        name: test-app-windows
+        path: out/make/*
 
   release:
     needs: build-windows
@@ -46,7 +46,12 @@ jobs: # 👈 jobs: 这一行不要动，permissions: 必须在它上方
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
-        path: artifacts
+        path: artifacts # 下载到 'artifacts' 目录
+
+    - name: List downloaded files for debugging # 👈 新增这一步，用于调试，你可以看看实际下载了什么
+      run: |
+        ls -R artifacts/test-app-windows/
+      shell: bash # 在 Ubuntu 上默认使用 bash
 
     - name: Create Release
       id: create_release
@@ -65,6 +70,8 @@ jobs: # 👈 jobs: 这一行不要动，permissions: 必须在它上方
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${{ github.workspace }}/artifacts/test-app-windows/*.exe
-        asset_name: YourAppName-Windows-Installer.exe
+        # ⚠️ 将 asset_path 修改为更精确的路径
+        # asset_path: ${{ github.workspace }}/artifacts/test-app-windows/*.exe # 之前的通配符
+        asset_path: ${{ github.workspace }}/artifacts/test-app-windows/squirrel.windows/x64/test-Setup-${{ github.run_number }}.exe # 👈 假设你的应用名是 'test'
+        asset_name: YourAppName-Windows-Installer-v${{ github.run_number }}.exe # 👈 修改文件名以匹配版本
         asset_content_type: application/octet-stream
