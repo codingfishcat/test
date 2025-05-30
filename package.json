@@ -1,7 +1,9 @@
 {
   "name": "test",
   "version": "1.0.0",
+  "description": "test",
   "main": "app.js",
+  "author": "test",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
