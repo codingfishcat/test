@@ -1,6 +1,6 @@
 {
   "name": "test",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "test",
   "main": "app.js",
   "author": "test",
@@ -18,10 +18,19 @@
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1",
-    "update-electron-app": "^3.0.0" 
+    "electron-updater": "^6.1.4"
   },
   "repository": { 
     "type": "git",
     "url": "https://github.com/codingfishcat/test.git"
+  },
+  "build": {
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "codingfishcat",
+        "repo": "test"
+      }
+    ]
   }
 }
