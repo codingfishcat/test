@@ -53,11 +53,10 @@ jobs:
             ls -la out/make/squirrel.windows/x64/
           fi
         fi
-        # 再次檢查 'out/' 目錄下是否有 *.yml 文件
-        find out/ -name "*.yml" -type f
         find out/ -name "*.exe" -type f
         find out/ -name "RELEASES" -type f
         find out/ -name "*.nupkg" -type f
+        find out/ -name "latest.yml" -type f # Added to list latest.yml
       shell: bash
 
     - name: Upload Windows installer and release files artifact
@@ -67,7 +66,9 @@ jobs:
         # 現在，確保同時上傳 Squirrel.Windows 的輸出和在 'out/' 根目錄生成的 'latest.yml'
         path: |
           out/make/squirrel.windows/x64/
-          out/*.yml # 這會把 'latest.yml' 和任何其他 .yml 文件包含進去
+          out/latest.yml # <-- ADDED: Upload latest.yml here
+
+  ---
 
   release:
     needs: build-windows
@@ -89,7 +90,7 @@ jobs:
         find artifacts/test-app-windows/ -name "*.exe" -type f
         find artifacts/test-app-windows/ -name "RELEASES" -type f
         find artifacts/test-app-windows/ -name "*.nupkg" -type f
-        find artifacts/test-app-windows/ -name "*.yml" -type f # 確認是否有 .yml 文件
+      shell: bash
 
     - name: Find and set executable and other artifact paths
       id: find_paths
@@ -97,7 +98,6 @@ jobs:
         EXE_PATH=$(find artifacts/test-app-windows/ -name "*.exe" -type f | head -1)
         RELEASES_PATH=$(find artifacts/test-app-windows/ -name "RELEASES" -type f | head -1)
         NUPKG_PATH=$(find artifacts/test-app-windows/ -name "*.nupkg" -type f | head -1)
-        LATEST_YML_PATH=$(find artifacts/test-app-windows/ -name "latest.yml" -type f | head -1) # 尋找 latest.yml
 
         if [ -z "$EXE_PATH" ]; then
           echo "No .exe file found!"
@@ -119,13 +119,11 @@ jobs:
         echo "Found executable: $EXE_PATH"
         echo "Found RELEASES file: $RELEASES_PATH"
         echo "Found .nupkg file: $NUPKG_PATH"
-        echo "Found latest.yml file: $LATEST_YML_PATH" # 輸出 latest.yml 路徑
 
         # Output all found paths
         echo "exe_path=$EXE_PATH" >> $GITHUB_OUTPUT
         echo "releases_path=$RELEASES_PATH" >> $GITHUB_OUTPUT
         echo "nupkg_path=$NUPKG_PATH" >> $GITHUB_OUTPUT
-        echo "latest_yml_path=$LATEST_YML_PATH" >> $GITHUB_OUTPUT # 輸出 latest.yml 路徑
       shell: bash
 
     - name: Create Release
@@ -140,7 +138,6 @@ jobs:
           ${{ steps.find_paths.outputs.exe_path }}
           ${{ steps.find_paths.outputs.releases_path }}
           ${{ steps.find_paths.outputs.nupkg_path }}
-          ${{ steps.find_paths.outputs.latest_yml_path }} # 附加 latest.yml 到 Release
         token: ${{ secrets.GITHUB_TOKEN }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

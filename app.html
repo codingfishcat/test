@@ -1,443 +1,165 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-  <meta charset="UTF-8">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-    }
-
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-
-    .nav {
-      background: #333;
-      padding: 10px 0;
-      margin-bottom: 20px;
-      border-radius: 5px;
-    }
-
-    .nav-btn {
-      background: none;
-      border: none;
-      color: white;
-      padding: 10px 15px;
-      cursor: pointer;
-      margin: 0 5px;
-      border-radius: 3px;
-      transition: all 0.2s;
-    }
-
-    .nav-btn:hover {
-      background: #555;
-    }
-
-    .nav-btn.active {
-      background: #007acc;
-    }
-
-    .page {
-      display: none;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      background: white;
-      padding: 20px;
-      border-radius: 5px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .page.active {
-      display: block;
-      opacity: 1;
-    }
-
-    .update-status {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      padding: 5px 10px;
-      border-radius: 3px;
-      font-size: 12px;
-      z-index: 1000;
-    }
-
-    .status-checking {
-      background: #ffa500;
-      color: white;
-    }
-
-    .status-updated {
-      background: #4caf50;
-      color: white;
-    }
-
-    .status-available {
-      background: #ff5722;
-      color: white;
-    }
-
-    .status-downloading {
-      background: #2196f3;
-      color: white;
-    }
-
-    .version-display {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #333;
-    }
-
-    .update-message {
-      margin-top: 15px;
-      color: #007acc;
-      font-weight: bold;
-    }
-
-    .update-button {
-      padding: 10px 20px;
-      background: #007acc;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      margin-top: 20px;
-      font-size: 16px;
-      margin-right: 10px;
-    }
-
-    .update-button:hover {
-      background: #005f99;
-    }
-
-    .update-button:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-
-    .update-button.success {
-      background: #4caf50;
-    }
-
-    .update-button.success:hover {
-      background: #45a049;
-    }
-
-    .release-notes {
-      margin-top: 15px;
-      padding: 10px;
-      background: #f9f9f9;
-      border-radius: 5px;
-      font-size: 14px;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-
-    .progress-container {
-      margin-top: 15px;
-      display: none;
-    }
-
-    .progress-bar {
-      width: 100%;
-      height: 20px;
-      background: #f0f0f0;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: #007acc;
-      border-radius: 10px;
-      transition: width 0.3s ease;
-    }
-
-    .progress-text {
-      margin-top: 5px;
-      font-size: 12px;
-      color: #666;
-    }
-
-    .loading {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid #f3f3f3;
-      border-top: 2px solid #007acc;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-right: 8px;
-    }
-
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .nav { background: #333; padding: 10px 0; margin-bottom: 20px; border-radius: 5px; }
+        .nav-btn { background: none; border: none; color: white; padding: 10px 15px; cursor: pointer; margin: 0 5px; border-radius: 3px; transition: all 0.2s; }
+        .nav-btn:hover { background: #555; }
+        .nav-btn.active { background: #007acc; }
+        .page { display: none; opacity: 0; transition: opacity 0.3s ease; background: white; padding: 20px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .page.active { display: block; opacity: 1; }
+        .update-status { position: fixed; top: 10px; right: 10px; padding: 5px 10px; border-radius: 3px; font-size: 12px; }
+        .status-checking { background: #ffa500; color: white; }
+        .status-updated { background: #4caf50; color: white; }
+        .status-available { background: #ff5722; color: white; cursor: pointer; }
+        .version-display { margin-top: 10px; font-size: 14px; color: #333; }
+        .update-message { margin-top: 15px; color: #007acc; font-weight: bold; }
+        .update-button { padding: 10px 20px; background: #007acc; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; font-size: 16px; }
+        .update-button:hover { background: #005f99; }
+    </style>
 </head>
-
 <body>
-  <div class="update-status" id="updateStatus" style="display: none;"></div>
+    <div class="update-status" id="updateStatus"></div>
+    
+    <div class="container">
+        <nav class="nav">
+            <button class="nav-btn active" onclick="showPage('page1', this)">page1</button>
+            <button class="nav-btn" onclick="showPage('page2', this)">page2</button>
+            <button class="nav-btn" onclick="showPage('page3', this)">page3</button>
+        </nav>
 
-  <div class="container">
-    <nav class="nav">
-      <button class="nav-btn active" onclick="showPage('home', this)">Page 1</button>
-      <button class="nav-btn" onclick="showPage('about', this)">Page 2</button>
-      <button class="nav-btn" onclick="showPage('update', this)">更新檢查</button>
-    </nav>
-
-    <div id="home" class="page active">
-      <h1>Page 1</h1>
-      <ul>
-        <li>Item 1</li>
-        <li>Item 2</li>
-        <li>Item 3</li>
-      </ul>
-    </div>
-
-    <div id="about" class="page">
-      <h1>Page 2</h1>
-      <ul>
-        <li>Item 4</li>
-        <li>Item 5</li>
-        <li>Item 6</li>
-      </ul>
-    </div>
-
-    <div id="update" class="page">
-      <h1>應用程式更新</h1>
-
-      <div class="version-display">
-        目前版本: <span id="currentVersion">載入中...</span>
-      </div>
-
-      <button class="update-button" id="checkUpdateBtn" onclick="checkForUpdates()">
-        檢查更新
-      </button>
-
-      <div id="updateInfo" class="update-message" style="display: none;"></div>
-      <div id="releaseNotes" class="release-notes" style="display: none;"></div>
-
-      <div id="progressContainer" class="progress-container">
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+        <div id="home" class="page active">
+            <h1>page1</h1>
+            <ul>
+                <li>Item1</li>
+                <li>Item2</li>
+                <li>Item3</li>
+            </ul>
         </div>
-        <div class="progress-text" id="progressText">下載中...</div>
-      </div>
 
-      <button id="downloadUpdateButton" class="update-button" style="display: none;">
-        下載更新
-      </button>
-      <button id="installUpdateButton" class="update-button success" style="display: none;">
-        重啟並安裝
-      </button>
+        <div id="about" class="page">
+            <h1>page2</h1>
+            <ul>
+              <li>Item4</li>
+              <li>Item5</li>
+              <li>Item6</li>
+            </ul>
+        </div>
+
+        <div id="update" class="page">
+            <h1>page3</h1>
+            
+            <div class="version-display">
+                當前版本: <span id="updateCurrentVersion">1.0.0</span>
+            </div>
+            <button class="update-button" onclick="checkUpdates()">檢查更新</button>
+            <div id="updateInfo" class="update-message" style="display: none;"></div>
+            <button id="downloadUpdateButton" class="update-button" style="display: none;">進行更新</button>
+        </div>
     </div>
-  </div>
 
-  <script>
-    let currentAppVersion = '1.0.0';
+    <script>
+        let APP_VER = '1.0.0';
+        const UPDATE_URL = 'http://127.0.0.1:5500/version.json';
 
-    function showPage(pageId, btn) {
-      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-      document.querySelectorAll('.nav-btn').forEach(navBtn => navBtn.classList.remove('active'));
+        function showPage(pageId, btn) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(navBtn => navBtn.classList.remove('active'));
+            
+            document.getElementById(pageId).classList.add('active');
+            if (btn) btn.classList.add('active');
 
-      document.getElementById(pageId).classList.add('active');
-      if (btn) btn.classList.add('active');
-
-      if (pageId === 'update') {
-        loadCurrentVersion();
-        resetUpdateUI();
-      }
-    }
-
-    function showStatus(msg, className) {
-      const statusEl = document.getElementById('updateStatus');
-      statusEl.textContent = msg;
-      statusEl.className = 'update-status ' + className;
-      statusEl.style.display = 'block';
-      setTimeout(() => statusEl.style.display = 'none', 3000);
-    }
-
-    async function loadCurrentVersion() {
-      try {
-        const version = await window.electronAPI.getAppVersion();
-        currentAppVersion = version;
-        document.getElementById('currentVersion').textContent = version;
-        document.title = `應用程式 - v${version}`;
-      } catch (error) {
-        console.error('獲取版本失敗:', error);
-        document.getElementById('currentVersion').textContent = '無法獲取';
-      }
-    }
-
-    function resetUpdateUI() {
-      document.getElementById('updateInfo').style.display = 'none';
-      document.getElementById('releaseNotes').style.display = 'none';
-      document.getElementById('downloadUpdateButton').style.display = 'none';
-      document.getElementById('installUpdateButton').style.display = 'none';
-      document.getElementById('progressContainer').style.display = 'none';
-    }
-
-    async function checkForUpdates() {
-      const checkBtn = document.getElementById('checkUpdateBtn');
-      const updateInfo = document.getElementById('updateInfo');
-      const releaseNotes = document.getElementById('releaseNotes');
-      const downloadBtn = document.getElementById('downloadUpdateButton');
-
-      // 重置 UI 狀態
-      resetUpdateUI();
-
-      // 顯示檢查中狀態
-      checkBtn.disabled = true;
-      checkBtn.innerHTML = '<span class="loading"></span>檢查中...';
-      showStatus('檢查更新中...', 'status-checking');
-
-      try {
-        // 調用主程序檢查更新
-        const result = await window.electronAPI.checkForUpdates();
-
-        if (result.error) {
-          // 如果主程序返回錯誤訊息，則顯示它
-          updateInfo.textContent = `檢查更新失敗: ${result.error}`;
-          updateInfo.style.color = '#ff5722'; // 錯誤訊息用紅色
-          updateInfo.style.display = 'block';
-          showStatus('檢查更新失敗', 'status-checking');
-        } else if (result.hasUpdate) {
-          // 發現新版本
-          updateInfo.textContent = `發現新版本 v${result.latestVersion}！目前版本: v${result.currentVersion}`;
-          updateInfo.style.color = '#007acc';
-          updateInfo.style.display = 'block';
-
-          if (result.releaseNotes) {
-            releaseNotes.innerHTML = `<strong>更新說明:</strong><br>${result.releaseNotes.replace(/\n/g, '<br>')}`;
-            releaseNotes.style.display = 'block';
-          }
-
-          downloadBtn.textContent = '下載並安裝更新';
-          downloadBtn.style.display = 'block';
-          showStatus('發現新版本！', 'status-available');
-        } else {
-          // 已是最新版本
-          updateInfo.textContent = `已是最新版本 v${result.currentVersion}`;
-          updateInfo.style.color = '#4caf50'; // 最新版本用綠色
-          updateInfo.style.display = 'block';
-          showStatus('已是最新版本', 'status-updated');
+            if (pageId === 'update') {
+                document.getElementById('updateCurrentVersion').textContent = APP_VER;
+                document.getElementById('updateInfo').style.display = 'none';
+                document.getElementById('downloadUpdateButton').style.display = 'none';
+            }
         }
-      } catch (error) {
-        // 這是處理 IPC 本身調用失敗的錯誤（例如，preload.js 或主程序未正確響應）
-        console.error('IPC 調用檢查更新失敗:', error);
-        updateInfo.textContent = `與應用程式內部通訊失敗，請嘗試重啟應用程式。錯誤: ${error.message}`;
-        updateInfo.style.color = '#ff5722';
-        updateInfo.style.display = 'block';
-        showStatus('內部錯誤', 'status-checking');
-      } finally {
-        // 無論成功或失敗，最後都恢復按鈕狀態
-        checkBtn.disabled = false;
-        checkBtn.textContent = '檢查更新';
-      }
-    }
 
-    async function downloadUpdate() {
-      const downloadBtn = document.getElementById('downloadUpdateButton');
-      const progressContainer = document.getElementById('progressContainer');
-
-      downloadBtn.disabled = true;
-      downloadBtn.innerHTML = '<span class="loading"></span>準備下載...';
-      progressContainer.style.display = 'block';
-
-      showStatus('開始下載更新...', 'status-downloading');
-
-      try {
-        const result = await window.electronAPI.downloadAndInstallUpdate();
-        if (result.error) {
-          throw new Error(result.error);
+        function showStatus(msg, clsName) {
+            const statusEl = document.getElementById('updateStatus');
+            statusEl.textContent = msg;
+            statusEl.className = 'update-status ' + clsName;
+            statusEl.style.display = 'block'; 
+            setTimeout(() => statusEl.style.display = 'none', 3000);
         }
-      } catch (error) {
-        console.error('下載更新失敗:', error);
-        showStatus('下載失敗', 'status-checking');
-        downloadBtn.disabled = false;
-        downloadBtn.textContent = '重試下載';
-        progressContainer.style.display = 'none';
-      }
-    }
 
-    async function installUpdate() {
-      showStatus('正在重啟...', 'status-checking');
-      await window.electronAPI.installUpdate();
-    }
+        async function checkUpdates() {
+            showStatus('檢查更新中...', 'status-checking');
+            document.getElementById('updateInfo').style.display = 'none';
+            document.getElementById('downloadUpdateButton').style.display = 'none';
 
-    // 監聽更新事件
-    window.electronAPI.onUpdateStatus((event, status) => {
-      if (status === 'checking') {
-        showStatus('檢查更新中...', 'status-checking');
-      }
-    });
+            try {
+                const res = await fetch(UPDATE_URL);
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                const data = await res.json();
+                const srvVer = data.version;
 
-    window.electronAPI.onUpdateAvailable((event, info) => {
-      showStatus('發現新版本！', 'status-available');
-    });
+                if (srvVer && compareVers(srvVer, APP_VER) > 0) {
+                    document.getElementById('updateInfo').textContent = `發現新版本 v${srvVer}！`;
+                    document.getElementById('updateInfo').style.display = 'block';
+                    
+                    const dlBtn = document.getElementById('downloadUpdateButton');
+                    dlBtn.textContent = '進行更新';
+                    dlBtn.onclick = () => simulateUpdate(srvVer, data.downloadUrl);
+                    dlBtn.style.display = 'block';
 
-    window.electronAPI.onUpdateNotAvailable((event, info) => {
-      showStatus('已是最新版本', 'status-updated');
-    });
+                    showStatus('發現新版本！', 'status-available');
+                } else {
+                    document.getElementById('updateInfo').textContent = '已是最新版本。';
+                    document.getElementById('updateInfo').style.display = 'block';
+                    showStatus('已是最新版本', 'status-updated');
+                }
+            } catch (error) {
+                document.getElementById('updateInfo').textContent = '檢查更新失敗，請稍後再試。';
+                document.getElementById('updateInfo').style.color = '#ff5722';
+                document.getElementById('updateInfo').style.display = 'block';
+                showStatus('檢查更新失敗', 'status-checking');
+            }
+        }
 
-    window.electronAPI.onUpdateError((event, error) => {
-      showStatus('更新錯誤', 'status-checking');
-      console.error('更新錯誤:', error);
-    });
+        function compareVers(v1, v2) {
+            const p1 = v1.split('.').map(Number);
+            const p2 = v2.split('.').map(Number);
 
-    window.electronAPI.onDownloadProgress((event, progress) => {
-      const progressFill = document.getElementById('progressFill');
-      const progressText = document.getElementById('progressText');
-      const downloadBtn = document.getElementById('downloadUpdateButton');
+            for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+                const val1 = p1[i] || 0;
+                const val2 = p2[i] || 0;
+                if (val1 > val2) return 1;
+                if (val1 < val2) return -1;
+            }
+            return 0;
+        }
 
-      progressFill.style.width = progress.percent + '%';
-      progressText.textContent = `下載中... ${progress.percent}% (${Math.round(progress.transferred / 1024 / 1024)}MB / ${Math.round(progress.total / 1024 / 1024)}MB)`;
-      downloadBtn.innerHTML = `<span class="loading"></span>下載中 ${progress.percent}%`;
+        async function simulateUpdate(newVer, dlUrl) {
+            showStatus('正在進行更新...', 'status-checking');
+            document.getElementById('updateInfo').textContent = '更新中，請稍候...';
+            document.getElementById('downloadUpdateButton').style.display = 'none';
 
-      showStatus(`下載中 ${progress.percent}%`, 'status-downloading');
-    });
+            await new Promise(resolve => setTimeout(resolve, 2500));
 
-    window.electronAPI.onUpdateDownloaded((event, info) => {
-      const downloadBtn = document.getElementById('downloadUpdateButton');
-      const installBtn = document.getElementById('installUpdateButton');
-      const progressContainer = document.getElementById('progressContainer');
+            APP_VER = newVer;
+            document.getElementById('updateCurrentVersion').textContent = APP_VER;
 
-      downloadBtn.style.display = 'none';
-      installBtn.style.display = 'block';
-      installBtn.onclick = installUpdate;
-      progressContainer.style.display = 'none';
+            document.getElementById('updateInfo').textContent = `更新完成！目前版本為 v${APP_VER}。`;
+            document.getElementById('updateInfo').style.color = '#4caf50';
 
-      showStatus('更新下載完成！', 'status-updated');
+            showStatus('更新成功！', 'status-updated');
+            setTimeout(() => document.getElementById('updateInfo').style.display = 'none', 3000);
+        }
 
-      document.getElementById('updateInfo').textContent = `更新已下載完成！點擊下方按鈕重啟並安裝 v${info.version}`;
-      document.getElementById('updateInfo').style.color = '#4caf50';
-    });
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('updateCurrentVersion').textContent = APP_VER;
+        });
 
-    // 綁定下載按鈕事件
-    document.getElementById('downloadUpdateButton').onclick = downloadUpdate;
+        window.electronAPI.getAppVersion().then(version => {
+          document.title = `目前版本: ${version}`;
+        });
 
-    // 頁面載入時初始化
-    document.addEventListener('DOMContentLoaded', function () {
-      loadCurrentVersion();
-    });
-  </script>
+    </script>
 </body>
-
 </html>
