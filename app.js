@@ -1,27 +1,27 @@
-const { app, BrowserWindow, dialog } = require('electron'); // 引入 dialog 模块用于弹窗提示
+const { app, BrowserWindow } = require('electron');
 const path = require('node:path');
-const { updateElectronApp } = require('update-electron-app'); // 引入自动更新模块
+const { updateElectronApp } = require('update-electron-app');
 
-updateElectronApp({
-  notifyUser: true, 
-  logger: require('electron-log'), 
-});
+updateElectronApp({ notifyUser: true });
 
-
-const createWindow = () =>
-  new BrowserWindow({
+const createWindow = () => {
+  const mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
-    webPreferences: { preload: path.join(__dirname, 'script.js') }
-  }).loadFile('app.html');
+    webPreferences: {
+      preload: path.join(__dirname, 'script.js')
+    }
+  });
+  mainWindow.loadFile('app.html');
+};
 
 app.whenReady().then(() => {
   createWindow();
-  app.on('activate', () =>
-    BrowserWindow.getAllWindows().length || createWindow()
-  );
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
 });
 
-app.on('window-all-closed', () =>
-  process.platform !== 'darwin' && app.quit()
-);
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});

@@ -31,7 +31,7 @@ jobs:
         echo "PACKAGE_VERSION=$PACKAGE_VERSION_VAL" >> $GITHUB_ENV # 设置为 env 变量，方便本 Job 内使用
         echo "version=$PACKAGE_VERSION_VAL" >> $GITHUB_OUTPUT # 设置为 step output，以便传递给其他 Job
         echo "Detected package version: $PACKAGE_VERSION_VAL" # 👈 打印版本号，方便调试
-      shell: bash # 确保使用 bash shell 执行，因为 Windows runner 默认是 PowerShell
+      shell: bash # 确保使用 bash shell 执行
 
     - name: Install dependencies
       run: npm install
@@ -43,7 +43,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: test-app-windows
-        path: out/make/*
+        path: out/make/* # 这个路径是 Electron Forge 产生的，应该没问题
 
   release:
     needs: build-windows # 依赖 build-windows Job
@@ -58,8 +58,9 @@ jobs:
 
     - name: Display downloaded artifact structure # 👈 新增：列出下载文件的结构，这是关键调试信息
       run: |
-        echo "Listing contents of artifacts/test-app-windows/"
-        ls -R artifacts/test-app-windows/
+        echo "Listing contents of artifacts/test-app-windows/ recursively:"
+        find artifacts/test-app-windows/ -type f -name "*.exe" # 👈 更精确地查找所有 .exe 文件
+        find artifacts/test-app-windows/ -maxdepth 3 # 👈 打印前3层目录结构
       shell: bash
 
     - name: Create Release
@@ -79,8 +80,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        # 暂时改回通配符，以确保文件能够被找到并上传
-        # 等我们从 "Display downloaded artifact structure" 步骤中拿到确切的文件名后，再来精确匹配
-        asset_path: ${{ github.workspace }}/artifacts/test-app-windows/squirrel.windows/x64/*Setup.exe # 👈 暂时使用通配符匹配 Setup.exe
-        asset_name: test-Windows-Installer-v${{ needs.build-windows.outputs.package_version }}.exe # 这里的名称可以保持动态
+        # 再次修改 asset_path，这次使用更宽泛的通配符，在 test-app-windows 目录下递归查找所有 .exe 文件
+        # 如果依然失败，那么问题肯定不在路径上，而是在文件是否真的被下载或存在
+        asset_path: ${{ github.workspace }}/artifacts/test-app-windows/**/*.exe # 👈 使用双星号通配符，递归查找所有 .exe 文件
+        asset_name: test-Windows-Installer-v${{ needs.build-windows.outputs.package_version }}.exe
         asset_content_type: application/octet-stream
