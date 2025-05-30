@@ -9,7 +9,13 @@ module.exports = {
   makers: [
     {
       name: '@electron-forge/maker-squirrel',
-      config: {},
+      config: {
+        publish: {
+          provider: 'github',
+          owner: 'codingfishcat',
+          repo: 'test'
+        }
+      },
     },
   ],
   plugins: [
