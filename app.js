@@ -13,7 +13,6 @@ const createWindow = () => {
     }
   });
   mainWindow.loadFile('app.html');
-  mainWindow.webContents.openDevTools();
 };
 
 app.whenReady().then(() => {
