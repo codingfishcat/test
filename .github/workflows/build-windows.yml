@@ -3,20 +3,20 @@ name: Build Electron App for Windows
 on:
   push:
     branches:
-      - main # 当代码推送到 main 分支时触发
+      - main
 
 permissions:
   contents: write # 赋予写入内容的权限
 
 jobs:
   build-windows:
-    runs-on: windows-latest # 只在最新的 Windows 虚拟机上运行
-    outputs: # 👈 新增：定义 Job 的输出
-      package_version: ${{ steps.read_version.outputs.version }} # 👈 将读取到的版本号作为 Job 输出
+    runs-on: windows-latest
+    outputs:
+      package_version: ${{ steps.read_version.outputs.version }} # 将读取到的版本号作为 Job 输出
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4 # 获取你的项目代码
+      uses: actions/checkout@v4
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
@@ -25,23 +25,28 @@ jobs:
         cache: 'npm'
 
     - name: Read package version # 读取 package.json 中的版本号，并设置为步骤输出
-      id: read_version # 👈 给这个步骤一个 ID
-      run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT # 👈 将版本号写入 GITHUB_OUTPUT
+      id: read_version
+      run: |
+        PACKAGE_VERSION_VAL=$(node -p "require('./package.json').version")
+        echo "PACKAGE_VERSION=$PACKAGE_VERSION_VAL" >> $GITHUB_ENV # 设置为 env 变量，方便本 Job 内使用
+        echo "version=$PACKAGE_VERSION_VAL" >> $GITHUB_OUTPUT # 设置为 step output，以便传递给其他 Job
+        echo "Detected package version: $PACKAGE_VERSION_VAL" # 👈 打印版本号，方便调试
+      shell: bash # 确保使用 bash shell 执行，因为 Windows runner 默认是 PowerShell
 
     - name: Install dependencies
-      run: npm install # 安装项目所需的所有依赖
+      run: npm install
 
     - name: Make Electron app (Windows)
-      run: npm run make # 执行 package.json 中定义的 "make" 脚本
+      run: npm run make
 
     - name: Upload Windows installer artifact
       uses: actions/upload-artifact@v4
       with:
-        name: test-app-windows # 上传产物的名称
-        path: out/make/* # Electron Forge 默认会将 make 后的产物放在 out/make 目录下
+        name: test-app-windows
+        path: out/make/*
 
   release:
-    needs: build-windows # 👈 依赖 build-windows Job
+    needs: build-windows # 依赖 build-windows Job
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
@@ -51,13 +56,18 @@ jobs:
       with:
         path: artifacts # 下载到 'artifacts' 目录
 
+    - name: Display downloaded artifact structure # 👈 新增：列出下载文件的结构，这是关键调试信息
+      run: |
+        echo "Listing contents of artifacts/test-app-windows/"
+        ls -R artifacts/test-app-windows/
+      shell: bash
+
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        # 👈 使用 build-windows Job 的输出版本号
         tag_name: v${{ needs.build-windows.outputs.package_version }}
         release_name: Release v${{ needs.build-windows.outputs.package_version }}
         draft: false
@@ -69,7 +79,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        # 👈 使用 build-windows Job 的输出版本号
-        asset_path: ${{ github.workspace }}/artifacts/test-app-windows/squirrel.windows/x64/test-${{ needs.build-windows.outputs.package_version }} Setup.exe
-        asset_name: test-Windows-Installer-v${{ needs.build-windows.outputs.package_version }}.exe
+        # 暂时改回通配符，以确保文件能够被找到并上传
+        # 等我们从 "Display downloaded artifact structure" 步骤中拿到确切的文件名后，再来精确匹配
+        asset_path: ${{ github.workspace }}/artifacts/test-app-windows/squirrel.windows/x64/*Setup.exe # 👈 暂时使用通配符匹配 Setup.exe
+        asset_name: test-Windows-Installer-v${{ needs.build-windows.outputs.package_version }}.exe # 这里的名称可以保持动态
         asset_content_type: application/octet-stream
