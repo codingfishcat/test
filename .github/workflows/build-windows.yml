@@ -27,11 +27,7 @@ jobs:
 
     - name: Package Electron app (Windows)
       run: npm run package # 执行 package.json 中定义的 "package" 脚本
-      env:
-        # 如果你有 Windows 代码签名证书，可以在这里设置环境变量
-        # 例如：
-        # WINDOWS_CODE_SIGN_PFX_PATH: ${{ secrets.WINDOWS_CODE_SIGN_PFX_PATH }}
-        # WINDOWS_CODE_SIGN_PFX_PASSWORD: ${{ secrets.WINDOWS_CODE_SIGN_PFX_PASSWORD }}
+      # 原来的 env: 及其注释行被删除，这样就不会有空值问题了
 
     - name: Upload Windows installer
       uses: actions/upload-artifact@v4
