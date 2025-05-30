@@ -50,14 +50,18 @@ jobs:
             ls -la out/make/squirrel.windows/x64/
           fi
         fi
+        # List all .exe, RELEASES, and .nupkg files
         find out/make/ -name "*.exe" -type f
+        find out/make/ -name "RELEASES" -type f
+        find out/make/ -name "*.nupkg" -type f
       shell: bash
 
-    - name: Upload Windows installer artifact
+    - name: Upload Windows installer and release files artifact
       uses: actions/upload-artifact@v4
       with:
         name: test-app-windows
-        path: out/make/squirrel.windows/x64/*.exe
+        # Upload the entire directory content, which should include .exe, RELEASES, and .nupkg
+        path: out/make/squirrel.windows/x64/
 
   release:
     needs: build-windows
@@ -75,19 +79,40 @@ jobs:
       run: |
         echo "Listing contents of artifacts/test-app-windows/ recursively:"
         find artifacts/test-app-windows/ -type f
-        echo "Looking for .exe files:"
+        echo "Looking for .exe, RELEASES, and .nupkg files:"
         find artifacts/test-app-windows/ -name "*.exe" -type f
+        find artifacts/test-app-windows/ -name "RELEASES" -type f
+        find artifacts/test-app-windows/ -name "*.nupkg" -type f
 
-    - name: Find and set executable path
-      id: find_exe
+    - name: Find and set executable and other artifact paths
+      id: find_paths # Changed ID from find_exe to find_paths for clarity
       run: |
         EXE_PATH=$(find artifacts/test-app-windows/ -name "*.exe" -type f | head -1)
+        RELEASES_PATH=$(find artifacts/test-app-windows/ -name "RELEASES" -type f | head -1)
+        NUPKG_PATH=$(find artifacts/test-app-windows/ -name "*.nupkg" -type f | head -1)
+
         if [ -z "$EXE_PATH" ]; then
           echo "No .exe file found!"
           exit 1
         fi
+        if [ -z "$RELEASES_PATH" ]; then
+          echo "No RELEASES file found!"
+          exit 1
+        fi
+        if [ -z "$NUPKG_PATH" ]; then
+          echo "No .nupkg file found!"
+          exit 1
+        fi
+
         echo "Found executable: $EXE_PATH"
+        echo "Found RELEASES file: $RELEASES_PATH"
+        echo "Found .nupkg file: $NUPKG_PATH"
+
+        # Output all found paths
         echo "exe_path=$EXE_PATH" >> $GITHUB_OUTPUT
+        echo "releases_path=$RELEASES_PATH" >> $GITHUB_OUTPUT
+        echo "nupkg_path=$NUPKG_PATH" >> $GITHUB_OUTPUT
+      shell: bash
 
     - name: Create Release
       id: create_release
@@ -97,7 +122,11 @@ jobs:
         name: Release v${{ needs.build-windows.outputs.package_version }}
         draft: false
         prerelease: false
-        files: ${{ steps.find_exe.outputs.exe_path }}
+        # Attach all three files to the release
+        files: |
+          ${{ steps.find_paths.outputs.exe_path }}
+          ${{ steps.find_paths.outputs.releases_path }}
+          ${{ steps.find_paths.outputs.nupkg_path }}
         token: ${{ secrets.GITHUB_TOKEN }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

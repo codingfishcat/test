@@ -5,10 +5,12 @@ const { autoUpdater } = require('electron-updater');
 let mainWindow;
 
 // 設置自動更新器
+// 當 provider 設置為 'github' 時，electron-updater 會自動在指定的 GitHub 儲存庫的 Releases 頁面中尋找
+// 相關的更新檔案，包括 Windows 的 RELEASES 檔案和 .nupkg 套件。
 autoUpdater.setFeedURL({
   provider: 'github',
-  owner: 'codingfishcat',
-  repo: 'test'
+  owner: 'codingfishcat', // 替換為您的 GitHub 用戶名或組織名
+  repo: 'test' // 替換為您的儲存庫名稱
 });
 
 const createWindow = () => {
@@ -49,45 +51,23 @@ ipcMain.handle('get-app-version', () => {
 });
 
 ipcMain.handle('check-for-updates', async () => {
-  // 檢查應用程式是否已打包
-  if (!app.isPackaged) {
-      console.log('在開發模式下跳過實際更新檢查，模擬結果。');
-      // 模擬一個更新可用的情況
-      return new Promise(resolve => {
-          setTimeout(() => {
-              const current = app.getVersion(); // 獲取當前版本
-              const latest = '1.0.1'; // 模擬一個新版本號
-
-              // 發送一個模擬的 "update-available" 事件給前端
-              if (mainWindow) {
-                  mainWindow.webContents.send('update-available', {
-                      version: latest,
-                      releaseNotes: '模擬更新說明：\n- 修正了一些小錯誤\n- 增加了新功能 X'
-                  });
-              }
-
-              resolve({
-                  hasUpdate: latest !== current,
-                  currentVersion: current,
-                  latestVersion: latest,
-                  releaseNotes: '模擬更新說明：\n這是開發模式下的模擬更新。\n\n您可以在這裡看到更多說明。'
-              });
-          }, 2000); // 模擬網路延遲 2 秒
-      });
-
-      // 如果想模擬 "無更新" 的情況，可以這樣：
-      // return { hasUpdate: false, currentVersion: app.getVersion(), latestVersion: app.getVersion(), releaseNotes: '已是最新版本' };
-      // 如果想模擬 "檢查失敗" 的情況，可以這樣：
-      // return { error: '模擬網路連線失敗，請檢查您的網路！' };
-  }
-
-  // 只有在應用程式已打包時，才執行實際的自動更新檢查
+  // 在開發模式下不再模擬更新，而是直接嘗試檢查更新。
+  // 錯誤處理會捕獲任何檢查失敗的情況，並提供友善的訊息。
   try {
       const result = await autoUpdater.checkForUpdates();
       // autoUpdater.checkForUpdates() 在沒有更新時也會返回一個物件，只是 updateInfo 可能不包含新版本資訊
       // 這裡確保 result 和 updateInfo 存在
       if (!result || !result.updateInfo) {
           console.error('autoUpdater.checkForUpdates() 返回了非預期的結果:', result);
+          // 如果 result 存在但沒有 updateInfo (表示沒有更新)，則返回無更新訊息
+          if (result && !result.updateInfo) {
+            return {
+              hasUpdate: false,
+              currentVersion: app.getVersion(),
+              latestVersion: app.getVersion(),
+              releaseNotes: '目前沒有可用的更新。' // 自定義訊息
+            };
+          }
           throw new Error('無法獲取更新資訊，請檢查網路連線或稍後再試。');
       }
 
