@@ -2,7 +2,6 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>極簡SPA</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f5f5f5; }
@@ -28,13 +27,13 @@
     
     <div class="container">
         <nav class="nav">
-            <button class="nav-btn active" onclick="showPage('home', this)">首頁</button>
-            <button class="nav-btn" onclick="showPage('about', this)">關於</button>
-            <button class="nav-btn" onclick="showPage('update', this)">更新</button>
+            <button class="nav-btn active" onclick="showPage('page1', this)">page1</button>
+            <button class="nav-btn" onclick="showPage('page2', this)">page2</button>
+            <button class="nav-btn" onclick="showPage('page3', this)">page3</button>
         </nav>
 
         <div id="home" class="page active">
-            <h1>歡迎使用極簡SPA</h1>
+            <h1>page1</h1>
             <p>這是一個完全自製的單頁應用，沒有依賴任何外部框架。</p>
             <p>特點：</p>
             <ul>
@@ -46,7 +45,7 @@
         </div>
 
         <div id="about" class="page">
-            <h1>關於我們</h1>
+            <h1>page2</h1>
             <p>這個應用展示了如何創建一個完全獨立的SPA，適合Electron應用使用。</p>
             <p>所有功能都包含在單一HTML文件中，包括：</p>
             <ul>
@@ -58,7 +57,7 @@
         </div>
 
         <div id="update" class="page">
-            <h1>應用程式更新</h1>
+            <h1>page3</h1>
             <p>在這裡您可以檢查應用程式是否有新版本可用。</p>
             <div class="version-display">
                 當前版本: <span id="updateCurrentVersion">1.0.0</span>
@@ -162,6 +161,11 @@
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('updateCurrentVersion').textContent = APP_VER;
         });
+
+        window.electronAPI.getAppVersion().then(version => {
+          document.title = `目前版本: ${version}`;
+        });
+
     </script>
 </body>
 </html>
