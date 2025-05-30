@@ -3,23 +3,23 @@ name: Build Electron App for Windows
 on:
   push:
     branches:
-      - main
+      - main # 当代码推送到 main 分支时触发
 
 permissions:
   contents: write # 赋予写入内容的权限
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-latest # 只在最新的 Windows 虚拟机上运行
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4 # 获取你的项目代码
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 22.x
+        node-version: 22.x # 使用 Node.js 22.x
         cache: 'npm'
 
     - name: Read package version # 读取 package.json 中的版本号
@@ -27,27 +27,27 @@ jobs:
       run: echo "PACKAGE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
 
     - name: Install dependencies
-      run: npm install
+      run: npm install # 安装项目所需的所有依赖
 
     - name: Make Electron app (Windows)
-      run: npm run make
+      run: npm run make # 执行 package.json 中定义的 "make" 脚本
 
     - name: Upload Windows installer artifact
       uses: actions/upload-artifact@v4
       with:
-        name: test-app-windows
-        path: out/make/*
+        name: test-app-windows # 上传产物的名称
+        path: out/make/* # Electron Forge 默认会将 make 后的产物放在 out/make 目录下
 
   release:
-    needs: build-windows
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-windows # 确保在构建成功后才运行
+    runs-on: ubuntu-latest # 创建 Release 通常在 Ubuntu 上运行
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' # 只在 main 分支 push 时触发 release
 
     steps:
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
-        path: artifacts
+        path: artifacts # 下载到 'artifacts' 目录
 
     - name: Create Release
       id: create_release
@@ -55,7 +55,9 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ env.PACKAGE_VERSION }} # 使用 package.json 中的版本号作为标签
+        # 核心修改：使用 package.json 中的版本号作为标签
+        tag_name: v${{ env.PACKAGE_VERSION }}
+        # Release 名称也使用 package.json 中的版本号
         release_name: Release v${{ env.PACKAGE_VERSION }}
         draft: false
         prerelease: false
@@ -66,8 +68,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        # 核心修改：确保文件名中的所有部分都与本地实际文件名完全匹配
-        # 特别是版本号后面的空格和 "Setup.exe"
-        asset_path: ${{ github.workspace }}/artifacts/test-app-windows/squirrel.windows/x64/test-${{ env.PACKAGE_VERSION }} Setup.exe # 👈 注意 test-${{ env.PACKAGE_VERSION }} 和 Setup.exe 之间的空格
+        # 确保文件名中的所有部分都与本地实际文件名完全匹配
+        asset_path: ${{ github.workspace }}/artifacts/test-app-windows/squirrel.windows/x64/test-${{ env.PACKAGE_VERSION }} Setup.exe
         asset_name: test-Windows-Installer-v${{ env.PACKAGE_VERSION }}.exe # 你希望在 Release 中显示的文件名
         asset_content_type: application/octet-stream
