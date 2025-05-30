@@ -1,14 +1,252 @@
 <!DOCTYPE html>
 <html>
-  <head>
+<head>
     <meta charset="UTF-8">
-    <title>test</title>
-  </head>
-  <body>
-    <h1>Hello World!</h1>
-    We are using Node.js <span id="node-version"></span>,
-    Chromium <span id="chrome-version"></span>,
-    and Electron <span id="electron-version"></span>.
+    <title>極簡SPA</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .nav { background: #333; padding: 10px 0; margin-bottom: 20px; border-radius: 5px; }
+        .nav-btn { background: none; border: none; color: white; padding: 10px 15px; cursor: pointer; margin: 0 5px; border-radius: 3px; transition: all 0.2s; }
+        .nav-btn:hover { background: #555; }
+        .nav-btn.active { background: #007acc; }
+        .page { display: none; opacity: 0; transition: opacity 0.3s ease; background: white; padding: 20px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .page.active { display: block; opacity: 1; }
+        .update-status { position: fixed; top: 10px; right: 10px; padding: 5px 10px; border-radius: 3px; font-size: 12px; }
+        .status-checking { background: #ffa500; color: white; }
+        .status-updated { background: #4caf50; color: white; }
+        .status-available { background: #ff5722; color: white; cursor: pointer; }
+        .version { color: #666; font-size: 12px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="update-status" id="updateStatus"></div>
+    
+    <div class="container">
+        <nav class="nav">
+            <button class="nav-btn active" onclick="showPage('home')">首頁</button>
+            <button class="nav-btn" onclick="showPage('about')">關於</button>
+            <button class="nav-btn" onclick="showPage('services')">服務</button>
+            <button class="nav-btn" onclick="showPage('contact')">聯絡</button>
+            <button class="nav-btn" onclick="showPage('settings')">設定</button>
+        </nav>
 
-  </body>
+        <div id="home" class="page active">
+            <h1>歡迎使用極簡SPA</h1>
+            <p>這是一個完全自製的單頁應用，沒有依賴任何外部框架。</p>
+            <p>特點：</p>
+            <ul>
+                <li>無CDN依賴</li>
+                <li>自動版本檢查</li>
+                <li>遠端更新功能</li>
+                <li>極輕量設計</li>
+            </ul>
+            <div class="version">當前版本: <span id="currentVersion">1.0.0</span></div>
+        </div>
+
+        <div id="about" class="page">
+            <h1>關於我們</h1>
+            <p>這個應用展示了如何創建一個完全獨立的SPA，適合Electron應用使用。</p>
+            <p>所有功能都包含在單一HTML文件中，包括：</p>
+            <ul>
+                <li>頁面路由系統</li>
+                <li>版本控制</li>
+                <li>自動更新檢查</li>
+                <li>平滑過渡效果</li>
+            </ul>
+        </div>
+
+        <div id="services" class="page">
+            <h1>我們的服務</h1>
+            <p>提供以下技術服務：</p>
+            <ul>
+                <li>Electron應用開發</li>
+                <li>SPA架構設計</li>
+                <li>自動更新系統</li>
+                <li>輕量化解決方案</li>
+            </ul>
+            <p>所有服務都遵循極簡主義原則，確保高效能和易維護。</p>
+        </div>
+
+        <div id="contact" class="page">
+            <h1>聯絡資訊</h1>
+            <p>如果您需要技術支援或有任何問題，請聯絡我們：</p>
+            <p>Email: support@example.com</p>
+            <p>電話: +886-1234-5678</p>
+            <p>地址: 台灣新竹市</p>
+            <button onclick="testUpdate()" style="margin-top: 10px; padding: 8px 16px; background: #007acc; color: white; border: none; border-radius: 3px; cursor: pointer;">測試更新檢查</button>
+        </div>
+
+        <div id="settings" class="page">
+            <h1>設定</h1>
+            <p>應用程式設定：</p>
+            <div style="margin: 10px 0;">
+                <label>
+                    <input type="checkbox" onchange="toggleAutoUpdate(this)"> 自動檢查更新
+                </label>
+            </div>
+            <div style="margin: 10px 0;">
+                <label>
+                    更新伺服器: <input type="text" id="updateServer" value="https://your-server.com/version.json" style="margin-left: 10px; padding: 5px;">
+                </label>
+            </div>
+            <button onclick="checkForUpdates()" style="padding: 8px 16px; background: #4caf50; color: white; border: none; border-radius: 3px; cursor: pointer;">立即檢查更新</button>
+        </div>
+    </div>
+
+    <script>
+        // 當前應用版本
+        const APP_VERSION = '1.0.0';
+        let autoUpdateEnabled = true;
+
+        // 頁面切換功能
+        function showPage(pageId) {
+            // 隱藏所有頁面
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // 移除所有按鈕的active狀態
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 顯示目標頁面
+            document.getElementById(pageId).classList.add('active');
+            
+            // 設置對應按鈕為active
+            event.target.classList.add('active');
+        }
+
+        // 更新狀態顯示
+        function updateStatus(message, className) {
+            const statusEl = document.getElementById('updateStatus');
+            statusEl.textContent = message;
+            statusEl.className = 'update-status ' + className;
+        }
+
+        // 檢查更新
+        async function checkForUpdates() {
+            updateStatus('檢查更新中...', 'status-checking');
+            
+            try {
+                // 這裡你需要替換成你的實際伺服器URL
+                const serverUrl = document.getElementById('updateServer').value;
+                
+                // 模擬版本檢查（實際使用時取消註解下面的代碼）
+                /*
+                const response = await fetch(serverUrl);
+                const versionData = await response.json();
+                
+                if (versionData.version !== APP_VERSION) {
+                    updateStatus('發現新版本！點擊更新', 'status-available');
+                    document.getElementById('updateStatus').onclick = () => downloadUpdate(versionData.downloadUrl);
+                } else {
+                    updateStatus('已是最新版本', 'status-updated');
+                    setTimeout(() => {
+                        document.getElementById('updateStatus').style.display = 'none';
+                    }, 3000);
+                }
+                */
+                
+                // 演示用的模擬更新檢查
+                setTimeout(() => {
+                    updateStatus('已是最新版本', 'status-updated');
+                    setTimeout(() => {
+                        document.getElementById('updateStatus').style.display = 'none';
+                    }, 3000);
+                }, 1000);
+                
+            } catch (error) {
+                console.error('更新檢查失败:', error);
+                updateStatus('檢查更新失敗', 'status-checking');
+                setTimeout(() => {
+                    document.getElementById('updateStatus').style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // 下載並應用更新
+        async function downloadUpdate(downloadUrl) {
+            try {
+                updateStatus('下載更新中...', 'status-checking');
+                
+                // 下載新版本的HTML
+                const response = await fetch(downloadUrl);
+                const newHtml = await response.text();
+                
+                // 保存到localStorage作為備份（實際環境中你可能想要其他方式）
+                localStorage.setItem('app_backup', document.documentElement.outerHTML);
+                localStorage.setItem('new_version', newHtml);
+                
+                // 應用更新（替換當前頁面）
+                document.open();
+                document.write(newHtml);
+                document.close();
+                
+                updateStatus('更新完成！', 'status-updated');
+                
+            } catch (error) {
+                console.error('更新下載失败:', error);
+                updateStatus('更新失敗', 'status-checking');
+            }
+        }
+
+        // 測試更新功能
+        function testUpdate() {
+            // 模擬發現新版本
+            updateStatus('發現新版本！點擊更新', 'status-available');
+            document.getElementById('updateStatus').onclick = () => {
+                updateStatus('這是測試模式', 'status-updated');
+                setTimeout(() => {
+                    document.getElementById('updateStatus').style.display = 'none';
+                }, 2000);
+            };
+        }
+
+        // 切換自動更新
+        function toggleAutoUpdate(checkbox) {
+            autoUpdateEnabled = checkbox.checked;
+            if (autoUpdateEnabled) {
+                startAutoUpdateCheck();
+            } else {
+                clearInterval(window.updateInterval);
+            }
+        }
+
+        // 啟動自動更新檢查
+        function startAutoUpdateCheck() {
+            // 每5分鐘檢查一次更新
+            window.updateInterval = setInterval(() => {
+                if (autoUpdateEnabled) {
+                    checkForUpdates();
+                }
+            }, 5 * 60 * 1000);
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('currentVersion').textContent = APP_VERSION;
+            
+            // 啟動時檢查一次更新
+            setTimeout(checkForUpdates, 2000);
+            
+            // 啟動自動更新檢查
+            if (autoUpdateEnabled) {
+                startAutoUpdateCheck();
+            }
+        });
+
+        // Electron環境檢測和版本顯示
+        if (typeof require !== 'undefined') {
+            try {
+                const { ipcRenderer } = require('electron');
+                console.log('運行在Electron環境中');
+            } catch (e) {
+                console.log('運行在瀏覽器環境中');
+            }
+        }
+    </script>
+</body>
 </html>
