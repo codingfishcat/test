@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - main # 当代码推送到 main 分支时触发
-  pull_request:
-    branches:
-      - main # 当有拉取请求到 main 分支时触发
+  # pull_request: # 如果你只希望在 push 到 main 时创建 Release，可以注释掉这一行和下面的 branches
+  #   branches:
+  #     - main
 
 jobs:
   build-windows:
@@ -25,16 +25,48 @@ jobs:
     - name: Install dependencies
       run: npm install # 安装项目所需的所有依赖
 
-    - name: Make Electron app (Windows) # ⚠️ 将这里从 "Package" 改为 "Make"
-      run: npm run make # ⚠️ 将这里从 "npm run package" 改为 "npm run make"
-      # env:
-        # 如果你有 Windows 代码签名证书，可以在这里设置环境变量
-        # 例如：
-        # WINDOWS_CODE_SIGN_PFX_PATH: ${{ secrets.WINDOWS_CODE_SIGN_PFX_PATH }}
-        # WINDOWS_CODE_SIGN_PFX_PASSWORD: ${{ secrets.WINDOWS_CODE_SIGN_PFX_PASSWORD }}
+    - name: Make Electron app (Windows)
+      run: npm run make # 执行 package.json 中定义的 "make" 脚本
 
-    - name: Upload Windows installer
+    - name: Upload Windows installer artifact
       uses: actions/upload-artifact@v4
       with:
         name: test-app-windows # 上传产物的名称
         path: out/make/* # Electron Forge 默认会将 make 后的产物放在 out/make 目录下
+
+  release: # 新增一个名为 'release' 的 Job
+    needs: build-windows # 这个 Job 依赖于 'build-windows' Job，确保在构建成功后才运行
+    runs-on: ubuntu-latest # 创建 Release 通常在 Ubuntu 上运行，因为它更快且资源消耗少
+    # 只有当代码推送到 main 分支时才触发 Release。如果你想在每次 push 时都创建 Release，可以调整条件。
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts # 下载到 'artifacts' 目录
+
+    - name: Create Release
+      id: create_release # 给这个步骤一个ID，方便后续引用
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub 提供的默认Token，有权限创建Release
+      with:
+        tag_name: v${{ github.run_number }} # 使用运行次数作为标签，例如 v1, v2。你也可以用 v1.0.0, v1.0.1等
+        release_name: Release v${{ github.run_number }} # Release 的标题
+        draft: false # 是否作为草稿发布 (设置为 false 则直接发布)
+        prerelease: false # 是否作为预发布版本
+
+    - name: Upload Release Asset (Windows Installer)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} # 从 'Create Release' 步骤获取上传URL
+        # ⚠️ 这里需要根据实际的安装包路径调整。Electron Forge 的 maker-squirrel 通常会在 out/make/ 下创建多个文件。
+        # 你可能需要解压 artifacts/test-app-windows 文件夹来找到实际的 .exe 安装程序。
+        # 常见的路径可能是 out/make/squirrel.windows/x64/your-app-name-Setup-X.Y.Z.exe
+        # 为了简单起见，我暂时用一个通配符，但你可能需要更精确的路径。
+        asset_path: ${{ github.workspace }}/artifacts/test-app-windows/*.exe
+        asset_name: YourAppName-Windows-Installer.exe # 你希望在 Release 中显示的文件名
+        asset_content_type: application/octet-stream # 安装包的MIME类型
